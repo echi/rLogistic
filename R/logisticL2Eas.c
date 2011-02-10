@@ -120,33 +120,6 @@ void updateBetaInactiveSet(double *X, double beta0, double *beta,
   }
 }
 
-/*
-int computeAdd2ActiveSet(double *X, double beta0, double *beta,
-			 double *zeta, double *Xbeta, double *partialResidual,
-			 int n, int sizeInactiveSet, int *inactiveSet,
-			 double lambda, double alpha, double m, double *mS) {
-
-  int i, j, iVar, sizeAdd2ActiveSet = 0;
-  const char transX = 'N';
-  const double alp = 1.;
-  const double bet = 0.;
-  const int one = 1;
-  double la = lambda * alpha;
-  double loma = lambda * (1. - alpha);
-
-  dgemv_(&transX, &n, &sizeInactiveSet, &alp, X, &n, beta, &one, &bet, Xbeta, &one);
-  for (i = n; i--; )
-    partialResidual[i] = zeta[i] - beta0 - Xbeta[i];
-  for (j = sizeInactiveSet; j--; ) {
-    iVar = inactiveSet[j];
-    beta[iVar] = softThreshold(m*innerProduct(&X[n*iVar], partialResidual, n), la) / (mS[iVar] + loma);
-    if (fabs(beta[iVar]) > 0.)
-      sizeAdd2ActiveSet++;
-  }
-  return sizeAdd2ActiveSet;
-}
-*/
-
 void updateActiveAndInactiveSets(int *activeSet, int *sizeActiveSet, int *inactiveSet, int *sizeInactiveSet,
 				 double *beta, int p) {
   int j;
@@ -184,26 +157,6 @@ void copyBetaActive2Beta(double *beta, double *betaActive, int *activeSet, int s
   for (j = sizeActiveSet; j--; )
     beta[activeSet[j]] = betaActive[j];  
 }
-
-/*
-void printMatrix(double *X, int nrow, int ncol) {
-  int i, j;
-  for (j = 0; j < nrow; j++) {
-    for (i = 0; i < ncol; i++)
-      Rprintf("%g ", X[nrow*i + j]);
-    Rprintf("\n");
-  }
-}
-
-void printMatrixInt(int *X, int nrow, int ncol) {
-  int i, j;
-  for (j = 0; j < nrow; j++) {
-    for (i = 0; i < ncol; i++)
-      Rprintf("%d ", X[nrow*i + j]);
-    Rprintf("\n");
-  }
-}
-*/
 
 double mean(double *vector, int nElements) {
   int i;
@@ -286,18 +239,6 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
 	}
 	copyBetaActive2Beta(beta, betaActive, activeSet, sizeActiveSet);
       }
-      // Check to see the active set needs to be enlarged.
-      /*      sizeAdd2ActiveSet = computeAdd2ActiveSet(X, *beta0, beta, zeta, Xbeta, partialResidual, *n, 
-					       sizeInactiveSet, inactiveSet,
-					       *lambda, *alpha, m, mS);
-
-      Rprintf("sizeAdd2ActiveSet = %d.\n", sizeAdd2ActiveSet);
-      
-      for (i = 0; i < sizeActiveSet; i++)
-	Rprintf("%d ", activeSet[i]);
-      Rprintf("\n");
-      */
-      //      updateBeta(X, *beta0, beta, zeta, Xbeta, partialResidual, *n, *p, *lambda, *alpha, m, mS);
       updateBetaInactiveSet(X, *beta0, beta, Xactive, betaActive, sizeActiveSet, zeta, Xbeta, partialResidual,
 			    inactiveSet, sizeInactiveSet, *n, *p, *lambda, *alpha, m, mS);
 
