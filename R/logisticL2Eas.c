@@ -40,19 +40,6 @@ int hasConverged(double beta0, double *beta, double *betaOld, int p, double tol)
   return 0;
 }  
 
-void updateIntercept(double *X, double *beta0, double *beta, double *zeta, double *Xbeta, int n, int p) {
-  const char transX = 'N';
-  const double alp = 1.;
-  const double bet = 0.;
-  const int one = 1;
-  int i;
-  *beta0 = 0.;
-  dgemv_(&transX, &n, &p, &alp, X, &n, beta, &one, &bet, Xbeta, &one);
-  for (i = n; i--; )
-    *beta0 += (zeta[i] - Xbeta[i]);
-  *beta0 /= (double) n;
-}
-
 void updateWorkingResponse(double *X, double *U, double w, double K,
 			   double beta0, double *beta, double *zeta, double *Xbeta,
 			   int n, int p) {
@@ -209,11 +196,9 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
     recordCurrentBeta(*beta0, beta, *p, lastOuterBeta);
 
     updateWorkingResponse(X, U, *w, *K, *beta0, beta, zeta, Xbeta, *n, *p);
-    /*
     *beta0 = mean(zeta, *n);
     for (i = *n; i--; )
       zeta[i] = zeta[i] - *beta0;
-    */
 
     for (;;) {
       if (sizeActiveSet > 0) {
@@ -227,7 +212,6 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
 	for (iterInner = *maxiter; iterInner--; ) {
 	  recordCurrentBeta(*beta0, betaActive, sizeActiveSet, lastInnerBeta);
 	  
-	  updateIntercept(Xactive, beta0, betaActive, zeta, Xbeta, *n, sizeActiveSet);
 	  updateBeta(Xactive, *beta0, betaActive, zeta, Xbeta, partialResidual, *n, sizeActiveSet, *lambda, *alpha,
 		     m, mSactive);
 	 
