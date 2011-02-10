@@ -34,8 +34,9 @@ cdL2E = function(X, Y, alpha, lambda, beta0, beta, w = 1, K = 0.16, niterInner =
 		WZ = P * (1-P) * (w * D - U)
 		zeta = matrix(beta0 + Xbeta - Ki*WZ, ncol=1)
 
-#+		beta0 = mean(zeta)  				#+
-#+		zeta = zeta - beta0 				#+
+		# Update beta0 
+		beta0 = mean(zeta)  				
+		zeta = zeta - beta0 				
 		repeat {
 			print("Active Set:")
 			print(activeSet)
@@ -46,12 +47,9 @@ cdL2E = function(X, Y, alpha, lambda, beta0, beta, w = 1, K = 0.16, niterInner =
 				betaActive = beta[activeSet]
 				for (iter in 1:niterInner) {
 					lastInner = c(beta0, betaActive)
-					# Update beta0 
-					beta0 = mean(zeta - Xa %*% betaActive)        #-
 					# Update beta
 					for (j in 1:length(activeSet)) {
-						pResponse = beta0 + Xa[,-j,drop=F] %*% betaActive[-j] #-
-#+						pResponse = Xa[,-j,drop=F] %*% betaActive[-j]         #+
+						pResponse = Xa[,-j,drop=F] %*% betaActive[-j]        
 						pResidual = zeta - pResponse
 						v = soft.th(m * t(Xa[,j,drop=F]) %*% pResidual, lambda*alpha)
 						v = v / (mS[activeSet[j]] + lambda*(1-alpha))
@@ -66,8 +64,7 @@ cdL2E = function(X, Y, alpha, lambda, beta0, beta, w = 1, K = 0.16, niterInner =
 				beta[activeSet] = betaActive
 			}
 
-			pResponse = beta0 + X %*% beta                #-
-#+			pResponse = Xa[,-j,drop=F] %*% betaActive[-j] #+
+			pResponse = Xa[,-j,drop=F] %*% betaActive[-j]
 			pResidual = zeta - pResponse
 			for (j in 1:length(inActiveSet)) {
 				v = soft.th(m * t(X[,inActiveSet[j],drop=F]) %*% pResidual, lambda*alpha)
