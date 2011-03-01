@@ -1,9 +1,8 @@
-source("call_logisticL2Eas.R")
+source("rLogistic.R")
 source("logisticL2E.R")
 X = as.matrix(read.table("../Lung/X.csv.gz", sep=","))
 Y = as.matrix(read.table("../Lung/Y.csv", sep=","))
 
-#alpha = 0.3
 alpha = 0.75
 
 start = 5700
@@ -13,15 +12,11 @@ Z = X[,start:end,drop=F]
 # Center SNP data
 Z = X
 Z = apply(Z, 2, FUN=function(x){return(x-mean(x))})
-#Z = apply(Z, 2, FUN=function(x){return(x/sqrt(sum(x^2)))})
 
 n = nrow(Z)
 p = ncol(Z)
 
 beta = matrix(0,p,1)
-#bHx = cdL2E(Z,Y,alpha,lambda,1,beta,tol=1e-9)
-#system.time(call_logisticL2Eas(Z,Y,alpha,lambda,1,beta, tol=1e-6))
-#rbHx = read.table("betaHx.csv", sep=",")
 
 # Calculate lambda_max
 lastHx = c()
@@ -36,48 +31,33 @@ zeta = beta0 - (1/0.16)*WZ
 
 lambdaMax = max(abs(t(Z) %*%(zeta - mean(zeta))))*0.16/(n*alpha) #+ 0.015
 lambdaMax = 1.5 * lambdaMax
-#lambdaMax = 0.2462577
 epsilon = 0.05
 lambdaMin = epsilon*lambdaMax
-#lambdaMin = 0.245257
 nSteps = 100
-#lambda = seq(lambdaMax, lambdaMin, length.out=nSteps)
 lambda = exp(seq(log(lambdaMax),log(lambdaMin),length.out=nSteps))
 
 # Loop the loop
-system.time(
-{
-for (i in 1:length(lambda)) {
-	system.time(call_logisticL2Eas(Z,Y,alpha,lambda[i],beta0,beta, tol=1e-6))
-	rbHx = read.table("betaHx.csv", sep=",")
-	lastHx = cbind(lastHx, t(rbHx[nrow(rbHx),]))
-	beta = t(rbHx[nrow(rbHx),-1,drop=F])
-	beta0 = rbHx[nrow(rbHx),1]
-	varSel = which(abs(lastHx[,i]) > 0)
-	if (length(varSel) > 40)
-		break
-}
-}
-)
+system.time({rLogistic.fit = rLogistic(Z,Y,alpha,lambda,beta0,beta)})
+
 varSel = c()
-for (i in 1:ncol(lastHx)) {
-	varSel = union(varSel, which(abs(lastHx[,i]) > 0))
+for (i in 1:rLogistic.fit$dim[2]) {
+	varSel = union(varSel, which(abs(rLogistic.fit$beta[,i]) > 0))
 }
 
-filename = paste("alpha=",alpha,"start=",start,"end=",end)
-save(file=filename)
+#filename = paste("alpha=",alpha,"start=",start,"end=",end)
+#save(file=filename)
 
 fMax = c()
 fMin = c()
-for (i in 1:ncol(lastHx)) {
-	fMax[i] = max(lastHx[varSel[-1],i])
-	fMin[i] = min(lastHx[varSel[-1],i])
+for (i in 1:rLogistic.fit$dim[2]) {
+	fMax[i] = max(rLogistic.fit$beta[varSel,i])
+	fMin[i] = min(rLogistic.fit$beta[varSel,i])
 }
 
 quartz()
-plot(lambda[1:ncol(lastHx)], fMax, type='n', ylim=c(min(fMin), max(fMax)),xlab=expression(lambda),ylab=expression(beta[j]))
-for (i in 2:(length(varSel) - 1)) {
-	lines(lambda[1:ncol(lastHx)], lastHx[varSel[i],],lwd=2)
+plot(rLogistic.fit$lambda, fMax, type='n', ylim=c(min(fMin), max(fMax)),xlab=expression(lambda),ylab=expression(beta[j]))
+for (i in 1:length(varSel)) {
+	lines(rLogistic.fit$lambda, rLogistic.fit$beta[varSel[i],],lwd=2)
 }
 
 # Don't know where these came from!
@@ -100,29 +80,21 @@ colors[[4]] = rgb(171/255, 217/255, 233/255)
 colors[[5]] = rgb(44/255, 123/255, 182/255)
 
 for (i in 1:length(ixSNP)) {
-	lines(lambda[1:ncol(lastHx)], lastHx[ixSNP[[i]]+1,], col=colors[[i]], lwd=2)
+	lines(rLogistic.fit$lambda, rLogistic.fit$beta[ixSNP[[i]],], col=colors[[i]], lwd=2)
 }
 
-rug(lambda[1:ncol(lastHx)])
+rug(rLogistic.fit$lambda)
 title(main=paste("n =",n,"p =",p,"alpha =",alpha))
 
 ####------- Test elastic net
 library(glmnet)
 
 #alpha = 1
-system.time(
-{
-glmnet.fit = glmnet(Z,Y,family="binomial",alpha=alpha,standardize=T)
-}
-)
+system.time({glmnet.fit = glmnet(Z,Y,family="binomial",alpha=alpha,standardize=T)})
 
 # Fish out the SNPs Chris found
 any(names(which(abs(glmnet.fit$beta[,ncol(glmnet.fit$beta)]) > 0)) %in% c("rs8034191"))
 any(names(which(abs(glmnet.fit$beta[,ncol(glmnet.fit$beta)]) > 0)) %in% c("rs1051730"))
-
-#glmnet.fit$beta[ixSNP1,]
-#plot(glmnet.fit$beta[,ncol(glmnet.fit$beta)])
-#points(ixSNP1,glmnet.fit$beta[ixSNP1,ncol(glmnet.fit$beta)],col='red',pch=16)
 
 cutOff = min(which(glmnet.fit$df > 20))
 subSample = 1:cutOff
