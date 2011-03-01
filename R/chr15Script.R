@@ -96,7 +96,7 @@ system.time({glmnet.fit = glmnet(Z,Y,family="binomial",alpha=alpha,standardize=T
 any(names(which(abs(glmnet.fit$beta[,ncol(glmnet.fit$beta)]) > 0)) %in% c("rs8034191"))
 any(names(which(abs(glmnet.fit$beta[,ncol(glmnet.fit$beta)]) > 0)) %in% c("rs1051730"))
 
-cutOff = min(which(glmnet.fit$df > 20))
+cutOff = min(which(glmnet.fit$df > 300))
 subSample = 1:cutOff
 
 varSel.gn = c()
@@ -124,63 +124,8 @@ rug(glmnet.fit$lambda[subSample])
 title(main=paste("n =",n,"p =",p,"alpha =",alpha))
 
 # BIC curves
-# First calculate the degrees of freedom.
-activeSet.gn = list()
-lrm.fit.gn = list()
-dof = c()
-BIC.gn = c()
-for (i in subSample) {
+source("BIC.glmnet.R")
+BIC.gn = BIC.glmnet(Z,Y,glmnet.fit,alpha,subSample)
 
-	activeSet.gn[[i]] = which(abs(glmnet.fit$beta[,i]) > 0)
-	sas = length(activeSet.gn[[i]])
-	if (length(activeSet.gn[[i]]) > 0) {
-		pmatrix = glmnet.fit$lambda[i]*(1-alpha)*diag(1,sas,sas)
-		Za = Z[,activeSet.gn[[i]],drop=F]
-		lrm.fit.gn[[i]] = lrm(Y ~ Za, penalty.matrix= pmatrix)
-		d = svd(Za)$d
-		dof[i] = sum(d^2 / (d^2 + (1-alpha)*glmnet.fit$lambda[i]/2))
-		L = lrm.fit.gn[[i]]$dev[2]
-	} else {
-		dof[i] = 0
-		linearPredictor = glmnet.fit$a0[i]
-		L = -2*sum(Y * linearPredictor - log(1 + exp(linearPredictor)))
-	}
-	BIC.gn[i] = L + log(n)*dof[[i]]
-}
-
-variables.gn = activeSet.gn[[min(which(BIC.gn == min(BIC.gn)))]]
-
-# First calculate the degrees of freedom.
-# BIC.L2E part 2
-activeSet.L2E = list()
-lrm.fit.L2E = list()
-dof = c()
-BIC.L2E = c()
-for (i in 1:ncol(lastHx)) {
-	varSel.L2E = which(abs(lastHx[,i]) > 0)
-	activeSet.L2E[[i]] = varSel.L2E[-1] - 1
-	sas = length(activeSet.L2E[[i]])	
-	if (length(activeSet.L2E[[i]]) > 0) {
-		Za = Z[,activeSet.L2E[[i]],drop=F]	
-		beta0 = lastHx[1,i]
-		beta = lastHx[activeSet.L2E[[i]]+1,i]
-		system.time(call_logisticL2Eas(Za,Y,0,(1-alpha)*lambda[i],beta0,beta, tol=1e-6))
-
-		rbHx = read.table("betaHx.csv", sep=",")
-		beta = t(rbHx[nrow(rbHx),-1,drop=F])
-		beta0 = rbHx[nrow(rbHx),1]
-		linearPredictor = beta0 + Za %*% beta
-
-		d = svd(Za)$d
-		dof[i] = sum(d^2 / (d^2 + (1-alpha)*lambda[i]/2))
-		
-	} else {
-		dof[i] = 0	
-		beta0.L2E = lastHx[1,i]
-		linearPredictor = beta0.L2E
-	}
-	L = sum(Y * linearPredictor - log(1 + exp(linearPredictor)))
-	BIC.L2E[i] = -2*L + log(n)*dof[[i]]
-}
-
-variables.L2E = activeSet.L2E[[min(which(BIC.L2E == min(BIC.L2E)))]]
+source("BIC.L2E.R")
+BIC.l2e = BIC.L2E(Z,Y,rLogistic.fit,alpha)

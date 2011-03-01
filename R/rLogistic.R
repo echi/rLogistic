@@ -9,7 +9,7 @@ rLogistic = function(X, Y, alpha, lambda, beta0, beta, w = 1, K = 0.16, niter=50
 	model = list()
 	model$a0 = numeric(length(lambda))
 	names(model$a0) = modelID
-	model$beta = matrix(NA, p, length(lambda))
+	model$beta = matrix(NA, ncol(X), length(lambda))
 	rownames(model$beta) = colnames(X)
 	colnames(model$beta) = modelID
 	model$df = rep(NA,length(lambda))
