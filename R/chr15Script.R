@@ -1,54 +1,30 @@
 source("rLogistic.R")
 source("logisticL2E.R")
+source("calculateLambdaSequence.R")
 X = as.matrix(read.table("../Lung/X.csv.gz", sep=","))
 Y = as.matrix(read.table("../Lung/Y.csv", sep=","))
 
-alpha = 0.75
+alpha = 0.05
 
-start = 5700
-end = 5800
-
-Z = X[,start:end,drop=F]
 # Center SNP data
-Z = X
-Z = apply(Z, 2, FUN=function(x){return(x-mean(x))})
+Z = apply(X, 2, FUN=function(x){return(x-mean(x))})
 
 n = nrow(Z)
 p = ncol(Z)
 
+# Calculate L2E regularization path solutions
+beta0 = log(mean(Y)/(1-mean(Y)))
 beta = matrix(0,p,1)
-
-# Calculate lambda_max
-lastHx = c()
-
-beta0 = 0
-beta = matrix(0,p,1)
-U = 2*Y - 1
-P = plogis(rep(1,n))
-D = 2*P-1
-WZ = P * (1-P) * (D- U)
-zeta = beta0 - (1/0.16)*WZ
-
-lambdaMax = max(abs(t(Z) %*%(zeta - mean(zeta))))*0.16/(n*alpha) #+ 0.015
-lambdaMax = 1.5 * lambdaMax
-epsilon = 0.05
-lambdaMin = epsilon*lambdaMax
-nSteps = 100
-lambda = exp(seq(log(lambdaMax),log(lambdaMin),length.out=nSteps))
-
-# Loop the loop
+lambda = calculateLambdaSequence(Y,Z,alpha=alpha,w=1,epsilon=0.05,nLambda=100)
 system.time({rLogistic.fit = rLogistic(Z,Y,alpha,lambda,beta0,beta)})
 
+# Plot regularization paths
 varSel = c()
 for (i in 1:rLogistic.fit$dim[2]) {
 	varSel = union(varSel, which(abs(rLogistic.fit$beta[,i]) > 0))
 }
 
-#filename = paste("alpha=",alpha,"start=",start,"end=",end)
-#save(file=filename)
-
-fMax = c()
-fMin = c()
+fMax = c(); fMin = c()
 for (i in 1:rLogistic.fit$dim[2]) {
 	fMax[i] = max(rLogistic.fit$beta[varSel,i])
 	fMin[i] = min(rLogistic.fit$beta[varSel,i])
@@ -84,19 +60,19 @@ for (i in 1:length(ixSNP)) {
 }
 
 rug(rLogistic.fit$lambda)
-title(main=paste("n =",n,"p =",p,"alpha =",alpha))
+title(main=paste("L2E: n =",n,"p =",p,"alpha =",alpha))
 
 ####------- Test elastic net
 library(glmnet)
 
 #alpha = 1
-system.time({glmnet.fit = glmnet(Z,Y,family="binomial",alpha=alpha,standardize=T)})
+system.time({glmnet.fit = glmnet(Z,Y,family="binomial",alpha=alpha,standardize=F)})
 
 # Fish out the SNPs Chris found
 any(names(which(abs(glmnet.fit$beta[,ncol(glmnet.fit$beta)]) > 0)) %in% c("rs8034191"))
 any(names(which(abs(glmnet.fit$beta[,ncol(glmnet.fit$beta)]) > 0)) %in% c("rs1051730"))
 
-cutOff = min(which(glmnet.fit$df > 300))
+cutOff = min(which(glmnet.fit$df > 50))
 subSample = 1:cutOff
 
 varSel.gn = c()
@@ -121,7 +97,7 @@ for (i in 1:length(ixSNP)) {
 	lines(glmnet.fit$lambda[subSample], glmnet.fit$beta[ixSNP[[i]],subSample], col=colors[[i]], lwd=2)
 }
 rug(glmnet.fit$lambda[subSample])
-title(main=paste("n =",n,"p =",p,"alpha =",alpha))
+title(main=paste("MLE: n =",n,"p =",p,"alpha =",alpha))
 
 # BIC curves
 source("BIC.glmnet.R")

@@ -10,7 +10,7 @@ hess = function(x,w) {
 	return(matrix(-0.25*(18*w*x^2 - 6*x - 4*w),1,1))
 }
 
-stepSizeCalculator = function(w, debugFlag = F, plotFlag = F) {
+stepSizeCalculator = function(w, debugFlag = F, plotFlag = F, wiggle = 0.000001) {
 	
 	if (w < 0 || w > 1) stop("w must be between 0 and 1")
 
@@ -37,15 +37,13 @@ stepSizeCalculator = function(w, debugFlag = F, plotFlag = F) {
 	}
 
 	if (debugFlag) {
-		return(list(K = -1*solution$objective, solution = solution))	} else {
-		return(-1*solution$objective)		
+		return(list(K = -1*solution$objective+wiggle, solution = solution))	} else {
+		return(-1*solution$objective+wiggle)
 	}
-
 }
 
-
 ### Manual diagnostics for step size correctness
-diagnosticPlots = T
+diagnosticPlots = F
 
 if (diagnosticPlots) {
 	
