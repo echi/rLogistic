@@ -19,16 +19,21 @@ BIC.glmnet = function(Z, Y, glmnet.model, alpha, modelSet) {
 		if (sas > 0) {
 			pmatrix = glmnet.model$lambda[i]*(1-alpha)*diag(1,sas,sas)
 			Za = Z[,activeSet.gn[[i]],drop=F]
-			lrm.fit.gn[[i]] = lrm(Y ~ Za, penalty.matrix= pmatrix)
+			lrm.fit.gn[[i]] = try(lrm(Y ~ Za, penalty.matrix= pmatrix), TRUE)
+			if (inherits(lrm.fit.gn[[i]], "try-error")) {
+				break	
+			}
 			d = svd(Za)$d
 			dof[i] = sum(d^2 / (d^2 + (1-alpha)*glmnet.model$lambda[i]/2))
 			L = lrm.fit.gn[[i]]$dev[2]
 		} else {
 			dof[i] = 0
 			linearPredictor = glmnet.model$a0[i]
-			L = -2*sum(Y * linearPredictor - log(1 + exp(linearPredictor)))
+			L = sum(Y * linearPredictor - log(1 + exp(linearPredictor)))
+#			L = median(Y * linearPredictor - log(1 + exp(linearPredictor)))
 		}
-		BIC[i] = L + log(n)*dof[i]
+		BIC[i] = (-2*L + log(n)*dof[i])/n
+#		BIC[i] = -2*L + log(n)*dof[i]/n
 	}
 	bic.gn$BIC = BIC
 	bic.gn$dof = dof
