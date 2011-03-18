@@ -162,7 +162,7 @@ void minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, in
       // Run coordinate descent on active set.
       for (iter = maxiter; iter--; ) {
 	  copyArray(betaActive, betaLast, sizeActiveSet);
-	  updateBeta(Xactive, Y, betaActive, Xbeta, partialResidual, n, sizeActiveSet, lambda, alpha, avgVar);
+	  updateBeta(Xactive, Y, betaActive, Xbeta, partialResidual, n, sizeActiveSet, lambda, alpha, avgVarActive);
 	 
 	  // Check Inner Loop Convergence
 	  if (hasConverged(betaActive, betaLast, sizeActiveSet, tol)) {
@@ -178,6 +178,7 @@ void minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, in
       for (j = sizeInactiveSet; j--; )
 	sum += fabs(beta[inactiveSet[j]]);
 
+      // Variables may drop out or come in.
       updateActiveAndInactiveSets(activeSet, &sizeActiveSet, inactiveSet, &sizeInactiveSet, beta, p);
      
       if (sum == 0.)

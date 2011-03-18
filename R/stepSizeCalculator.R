@@ -10,8 +10,10 @@ hess = function(x,w) {
 	return(matrix(-0.25*(18*w*x^2 - 6*x - 4*w),1,1))
 }
 
-stepSizeCalculator = function(w, debugFlag = F, plotFlag = F, wiggle = 0.000001) {
-	
+stepSizeCalculator = function(w, debugFlag = FALSE, plotFlag = FALSE, wiggle = 0.000001) {
+
+#stepSizeCalculator = function(w, wiggle = 0.000001) {
+
 	if (w < 0 || w > 1) stop("w must be between 0 and 1")
 
 	start = (-3+sqrt(33))/12
@@ -20,6 +22,9 @@ stepSizeCalculator = function(w, debugFlag = F, plotFlag = F, wiggle = 0.000001)
 
 	solution = nlminb(start, objective=stepBound, gradient=grad, hessian=hess, lower=lower, upper=upper, w=w)
 
+#	plotFlag = FALSE
+#	debugFlag = FALSE
+	
 	if (plotFlag) {
 		quartz()
 		x = seq(-1,1,0.001)
