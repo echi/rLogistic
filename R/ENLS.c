@@ -1,52 +1,12 @@
-#include <R.h> 
-#include <Rmath.h> 
-#include <R_ext/BLAS.h>
-#include <math.h>
-#include <stdio.h>
+#include "util.h"
 
 inline double softThreshold(double x, double lambda) {
-  return(sign(x) * fmax2( fabs(x) - lambda, 0.));
+  return(sign(x) * fmax2(fabs(x) - lambda, 0.));
 }
 
-void copyArray(double *source, double *destination, int nElements) {
-  int j;
-  for (j = nElements; j--; )
-    destination[j] = source[j];
+inline double cplogis(double x) {
+  return 0.5 * (1. + tanh(0.5 * x));
 }
-
-int hasConverged(double *currentBeta, double *lastBeta, int p, double tol) {
-  int j;
-  double delta, norm = 0.;
-  for (j = p; j--; ) {
-    delta = currentBeta[j] - lastBeta[j];
-    norm += delta * delta;
-  }
-  if (sqrt(norm) < tol)
-    return 1;
-  return 0;
-}  
-
-double innerProduct(double *x, double *y, int n) {
-  const int one = 1;
-  return ddot_(&n, x, &one, y, &one);
-}
-
-// copyBigVectorIntoSmallVector assumes sizeIndexSet > 0!!!                                                                     
-void copyBigVectorIntoSmallVector(double *bigVector, double *smallVector,
-                                  int *indexSet, int sizeIndexSet) {
-  int j;
-  for (j = 0; j < sizeIndexSet; j++)
-    smallVector[j] = bigVector[indexSet[j]];
-}
-
-// copySmallVectorIntoBigVector assumes sizeIndexSet > 0!!!                                                                     
-void copySmallVectorIntoBigVector(double *smallVector, double *bigVector,
-                                  int *indexSet, int sizeIndexSet) {
-  int j;
-  for (j = 0; j < sizeIndexSet; j++)
-    bigVector[indexSet[j]] = smallVector[j];
-}
-
 
 void updateBeta(double *X, double *Y, double *beta,
 		double *Xbeta, double *partialResidual,
@@ -244,13 +204,11 @@ void screenVariablesSAFE(double *X, double *Y, int n, int p, double lambda, doub
   *sizeKeepSet = 0;
   for (j = 0; j < p; j++) {
     varXj = innerProduct(&X[n*j], &X[n*j], n);
-    /*
-    Rprintf("((double)n)*alpha*lambda = %g\n", ((double)n*alpha*lambda));
-    Rprintf("normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda) = %g\n", normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda));
-    Rprintf("Second Term = %g\n", normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda)*(lambdaMax-((double)n)*lambda)/lambdaMax);
-    threshold = ((double)n)*alpha*lambda - (normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda)*(lambdaMax-((double)n)*lambda)/lambdaMax);
-    Rprintf("threshold[%d] = %g\n", j, threshold);
-    */
+    //    Rprintf("((double)n)*alpha*lambda = %g\n", ((double)n*alpha*lambda));
+    //    Rprintf("normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda) = %g\n", normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda));
+    //    Rprintf("Second Term = %g\n", normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda)*(lambdaMax-((double)n)*lambda*alpha)/lambdaMax);
+    threshold = ((double)n)*alpha*lambda - (normY*sqrt(varXj + ((double)n)*(1.-alpha)*lambda)*(lambdaMax-((double)n)*lambda*alpha)/lambdaMax);
+    //    Rprintf("threshold[%d] = %g\n", j, threshold);
     if (scores[j] >= threshold) {
       keepSet[*sizeKeepSet] = j;
       (*sizeKeepSet)++;
@@ -270,11 +228,10 @@ void ENLS(double *X, double *Y, double *beta, int *n, int *p,
 
   minimizeElasticNetSquaredLoss(X, Y, beta, *n, *p, *lambda, *alpha, *maxiter, *tol);
 
-  /* No screening
+  /*
+  // No screening
 
-  // 1. Center the data
-
-  // 2. Discard variables
+  // Discard variables
   screenVariablesSAFE(X, Y, *n, *p, *lambda, *alpha, keepSet, &sizeKeepSet);
   //  screenVariablesSTRONG(X, Y, *n, *p, *lambda, *alpha, keepSet, &sizeKeepSet);
 
@@ -305,14 +262,9 @@ void ENLS(double *X, double *Y, double *beta, int *n, int *p,
       beta[j] = 0.;
   }
 
-  */
-
   free(betaScreened);
   free(keepSet);
-}
-
-inline double cplogis(double x) {
-  return 0.5 * (1. + tanh(0.5 * x));
+  */
 }
 
 void updateWorkingResponse(double *X, double *U, double w, double K,
@@ -341,33 +293,11 @@ void writeParametersToFile(FILE *pFile, double beta0, double *beta, int p) {
   fprintf(pFile,"%g\n", beta[p-1]);
 }
 
-
-double mean(double *vector, int nElements) {
-  int i;
-  double sum = 0.;
-  for (i = nElements; i--; )
-    sum += vector[i];
-  return sum/((double)nElements);
-}
-
 void recordCurrentBeta(double beta0, double *beta, int p, double *betaOld) {
   int j;
   for (j = p; j--; )
     betaOld[j+1] = beta[j];
   betaOld[0] = beta0;
-}
-
-int hasConverged2(double beta0, double *beta, double *betaOld, int p, double tol) {
-  int j;
-  double delta = beta0 - betaOld[0];
-  double norm = delta * delta;
-  for (j = p; j--; ) {
-    delta = beta[j] - betaOld[j+1];
-    norm += delta * delta;
-  }
-  if (sqrt(norm) < tol)
-    return 1;
-  return 0;
 }
 
 void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
@@ -380,6 +310,7 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
   double *U = calloc(*n, sizeof(double));
   double *zeta = calloc(*n, sizeof(double));
   double *betaLast = calloc(*p+1, sizeof(double));
+  double *Xcentered = calloc((*n)*(*p), sizeof(double));
   FILE *pFile;
 
   pFile = fopen("betaHx.csv","w");
@@ -388,15 +319,17 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
   for (i = *n; i--; )
     U[i] = (double) (Y[i] + Y[i] - 1);
 
+  centerColumns(X, Xcentered, *n, *p);
+
   newLambda = *lambda / ( (*w) * (*K) );
 
   for (iter = *maxiter; iter--; ) {
     recordCurrentBeta(*beta0, beta, *p, betaLast);
-    updateWorkingResponse(X, U, *w, *K, *beta0, beta, zeta, Xbeta, *n, *p);
+    updateWorkingResponse(Xcentered, U, *w, *K, *beta0, beta, zeta, Xbeta, *n, *p);
     *beta0 = mean(zeta, *n);
     for (i = *n; i--; )
       zeta[i] = zeta[i] - *beta0;
-    ENLS(X, zeta, beta, n, p, &newLambda, alpha, maxiter, tol);
+    ENLS(Xcentered, zeta, beta, n, p, &newLambda, alpha, maxiter, tol);
 
     writeParametersToFile(pFile, *beta0, beta, *p);
 
@@ -411,4 +344,5 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
   free(U);
   free(zeta);
   free(betaLast);
+  free(Xcentered);
 }
