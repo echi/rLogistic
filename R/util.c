@@ -16,6 +16,7 @@ int hasConverged(double *currentBeta, double *lastBeta, int p, double tol) {
   if (sqrt(norm) < tol)
     return 1;
   return 0;
+
 }  
 
 double innerProduct(double *x, double *y, int n) {
@@ -58,6 +59,24 @@ int hasConverged2(double beta0, double *beta, double *betaOld, int p, double tol
   if (sqrt(norm) < tol)
     return 1;
   return 0;
+}
+
+void recordCurrentBeta(double beta0, double *beta, int p, double *betaOld) {
+  int j;
+  for (j = p; j--; )
+    betaOld[j+1] = beta[j];
+  betaOld[0] = beta0;
+}
+
+double twoNorm(double beta0, double *beta, double *betaOld, int p) {
+  int j;
+  double delta = beta0 - betaOld[0];
+  double norm = delta * delta;
+  for (j = p; j--; ) {
+    delta = beta[j] - betaOld[j+1];
+    norm += delta * delta;
+  }
+  return(sqrt(norm));
 }
 
 void centerColumns(double *X, double *C, int n, int p) {

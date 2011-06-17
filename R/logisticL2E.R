@@ -13,6 +13,8 @@ cdL2E = function(X, Y, alpha, lambda, beta0, beta, w = 1, K = 0.16, niterInner =
 		
 	if (length(Y) != n | length(beta) !=p) stop("length(Y) == nrow(X) & length(beta) == ncol(X)")
 
+	X = apply(X,2,FUN=function(x){x-mean(x)})
+
 	Ki = 1/K;
 	U = 2*Y-1
 	S = apply(X,2,FUN = function(x) {return(t(x)%*%x)} )

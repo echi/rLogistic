@@ -24,12 +24,12 @@ CS = sqrt(sum(Yc^2))*apply(Xc[,ix],2,FUN=function(x){sqrt(sum(x^2))})
 lambdas = (scores + CS)/(1+CS/lambdaMax)/n
 
 lambda = 1
-beta.ENLS = ENLS(Xc, Yc, alpha, lambda, tol=1e-9)
+beta.ENLS = ENLS(Xc, Yc, alpha, lambda, beta=matrix(0, ncol(Xc), 1), tol=1e-9)
 glmnet.fit = glmnet(Xc, Yc, family="gaussian",alpha=alpha, lambda=lambda,standardize=FALSE,thresh=1e-9)
 cbind(as.matrix(glmnet.fit$beta), beta.ENLS)
 
 alpha = 0
-beta.ENLS = ENLS(Xc, Yc, alpha, lambda, tol=1e-9)
+beta.ENLS = ENLS(Xc, Yc, alpha, lambda, beta=matrix(0, ncol(Xc), 1), tol=1e-9)
 beta.ridge = solve(t(Xc) %*% Xc + nrow(Xc)*lambda*(1-alpha)*diag(1,ncol(Xc),ncol(Xc)))%*%t(Xc) %*% Yc
 cbind(beta.ENLS, beta.ridge)
 
@@ -39,13 +39,12 @@ Xtilde = rbind(Xc, sqrt(lambda*(1-alpha)*n)*diag(1,p,p))
 Ytilde = rbind(Yc, matrix(0,p,1))
 
 alpha = 0.25
-beta.ENLS = ENLS(Xc, Yc, alpha, lambda, tol=1e-9)
+beta.ENLS = ENLS(Xc, Yc, alpha, lambda, beta=matrix(0, ncol(Xc), 1), tol=1e-9)
 glmnet.fit = glmnet(Xc, Yc, family="gaussian",alpha=alpha, lambda=lambda,standardize=FALSE,thresh=1e-9)
 glmnet.fit2 = glmnet(Xtilde, Ytilde, family="gaussian",alpha=1, lambda=lambda*alpha,standardize=FALSE,thresh=1e-9)
 #lars.fit = lars(Xtilde,Ytilde,type="lasso",normalize=FALSE)
-beta.ENLS2 = ENLS(Xtilde, Ytilde, alpha=1, lambda=lambda*alpha, tol=1e-9)
+beta.ENLS2 = ENLS(Xtilde, Ytilde, alpha=1, lambda=lambda*alpha, beta=matrix(0, ncol(Xc), 1), tol=1e-9)
 cbind(as.matrix(glmnet.fit$beta), as.matrix(glmnet.fit2$beta), beta.ENLS, beta.ENLS2)
-
 
 lambda*(alpha*norm(glmnet.fit2$beta,"1") + 0.5*(1-alpha)*norm(glmnet.fit2$beta,"f")^2)
 lambda*(alpha*norm(as.matrix(beta.ENLS2),"1") + 0.5*(1-alpha)*norm(as.matrix(beta.ENLS2),"f")^2)

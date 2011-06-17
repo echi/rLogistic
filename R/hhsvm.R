@@ -1,6 +1,6 @@
 source("call_ENLS.R")
 
-rLogistic = function(X, Y, alpha, lambda, beta0, beta, w = 1, niter=500, tol=1e-6, maxVar = 100) {
+hhsvm = function(X, Y, alpha, lambda, beta0, beta, t = 0.5, niter=500, tol=1e-6, maxVar = 100) {
 
 	modelID = c()
 	for (i in 1:length(lambda)) {
@@ -18,7 +18,7 @@ rLogistic = function(X, Y, alpha, lambda, beta0, beta, w = 1, niter=500, tol=1e-
 	nIter = 0
 	for (i in 1:length(lambda)) {
 		nIter = nIter + 1
-		output = call_logisticL2E(X, Y, alpha, lambda[i], beta0, beta, w=w, niter=niter, tol=tol)
+		output = call_HHSVM(X, Y, alpha, lambda[i], beta0, beta, t=t, niter=niter, tol=tol)
 #		rbHx = read.table("betaHx.csv", sep=",")
 #		beta = t(rbHx[nrow(rbHx),-1,drop=F])
 #		beta0 = rbHx[nrow(rbHx),1]

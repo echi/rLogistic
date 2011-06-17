@@ -24,38 +24,20 @@ void updateWorkingResponse(double *X, double *U, double w, double K,
   }
 }
 
-void writeParametersToFile(FILE *pFile, double beta0, double *beta, int p) {
-  int j;
-  fprintf(pFile,"%g, ", beta0);
-  for (j = 0; j < p - 1; j++)
-    fprintf(pFile,"%g, ", beta[j]);
-  fprintf(pFile,"%g\n", beta[p-1]);
-}
-
-void recordCurrentBeta(double beta0, double *beta, int p, double *betaOld) {
-  int j;
-  for (j = p; j--; )
-    betaOld[j+1] = beta[j];
-  betaOld[0] = beta0;
-}
-
 void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
 		 double * K, double *w, double *lambda, double *alpha,
-		 int *maxiter, double *tol,
-		 int *save_flag, char const *filename) {
+		 int *maxiter, double *tol, double *beta_final) {
   int i, j, iter;
-  double newLambda;
+  double newLambda, deltaBeta;
   double *Xbeta = calloc(*n, sizeof(double));
   double *U = calloc(*n, sizeof(double));
   double *zeta = calloc(*n, sizeof(double));
   double *betaLast = calloc(*p+1, sizeof(double));
   double *Xcentered = calloc((*n)*(*p), sizeof(double));
-  FILE *pFile;
-
-  pFile = fopen("betaHx.csv","w");
-  writeParametersToFile(pFile, *beta0, beta, *p);
+  int iIter, maxIter = 3;
 
   for (i = *n; i--; )
+
     U[i] = (double) (Y[i] + Y[i] - 1);
 
   centerColumns(X, Xcentered, *n, *p);
@@ -68,17 +50,19 @@ void logisticL2E(double *X, int *Y, double *beta0, double *beta, int *n, int *p,
     *beta0 = mean(zeta, *n);
     for (i = *n; i--; )
       zeta[i] = zeta[i] - *beta0;
-    ENLS(Xcentered, zeta, beta, n, p, &newLambda, alpha, maxiter, tol);
+    //    ENLS(Xcentered, zeta, beta, n, p, &newLambda, alpha, maxiter, tol);
+    iIter = ENLS(Xcentered, zeta, beta, n, p, &newLambda, alpha, &maxIter, tol);
+    deltaBeta = twoNorm(*beta0, beta, betaLast, *p);
 
-    writeParametersToFile(pFile, *beta0, beta, *p);
+    Rprintf("oIter %3d: iIters %2d : ||beta - beta_old|| = %7.1e\n", *maxiter - iter, iIter, deltaBeta);
 
-    // Check Outer Loop Convergence                                                                                             
-    if (hasConverged2(*beta0, beta, betaLast, *p, *tol)) {
-      Rprintf("Number of outer iterations = %d.\n", *maxiter - iter);
+    // Check Outer Loop Convergence
+    if (deltaBeta < *tol) {
       break;
     }
   }
-  fclose(pFile);
+  recordCurrentBeta(*beta0, beta, *p, beta_final);
+
   free(Xbeta);
   free(U);
   free(zeta);

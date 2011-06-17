@@ -74,7 +74,7 @@ void updateXactive(double *X, double *Xactive, int nrowsX, int *activeSet, int s
       Xactive[nrowsX*j + k] = X[nrowsX*activeSet[j] + k];
 }
 
-void minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, int p, 
+int minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, int p, 
 		 double lambda, double alpha, int maxiter, double tol) {
   int i, j, iter;
   double *Xbeta = calloc(n, sizeof(double));
@@ -86,7 +86,7 @@ void minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, in
   double *betaActive = calloc(p, sizeof(double));
   int *activeSet = calloc(p, sizeof(int));
   int *inactiveSet = calloc(p, sizeof(int));
-  int sizeActiveSet, sizeInactiveSet;
+  int sizeActiveSet, sizeInactiveSet, inner_iter_sum=0;
   double sum;
 
   for (j = p; j--; )
@@ -102,31 +102,32 @@ void minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, in
       
       for (j = 0; j < sizeActiveSet; j++)
 	avgVarActive[j] = avgVar[activeSet[j]];
-	
+      
       // Run coordinate descent on active set.
       for (iter = maxiter; iter--; ) {
-	  copyArray(betaActive, betaLast, sizeActiveSet);
-	  updateBeta(Xactive, Y, betaActive, Xbeta, partialResidual, n, sizeActiveSet, lambda, alpha, avgVarActive);
-	 
-	  // Check Inner Loop Convergence
-	  if (hasConverged(betaActive, betaLast, sizeActiveSet, tol)) {
-	    Rprintf("Number of inner iterations = %d.\n", maxiter - iter);
-	    break;
-	  }
-	}
-	copySmallVectorIntoBigVector(betaActive, beta, activeSet, sizeActiveSet);
-      }
-      updateBetaInactiveSet(X, Y, beta, Xactive, betaActive, sizeActiveSet, Xbeta, partialResidual,
-			    inactiveSet, sizeInactiveSet, n, p, lambda, alpha, avgVar);
-      sum = 0.;
-      for (j = sizeInactiveSet; j--; )
-	sum += fabs(beta[inactiveSet[j]]);
+	//	copyArray(betaActive, betaLast, sizeActiveSet);
+	updateBeta(Xactive, Y, betaActive, Xbeta, partialResidual, n, sizeActiveSet, lambda, alpha, avgVarActive);
 
-      // Variables may drop out or come in.
-      updateActiveAndInactiveSets(activeSet, &sizeActiveSet, inactiveSet, &sizeInactiveSet, beta, p);
-     
-      if (sum == 0.)
-	break;
+	// Check Inner Loop Convergence
+	/*	if (hasConverged(betaActive, betaLast, sizeActiveSet, tol)) {
+	  //	  Rprintf("Number of inner iterations = %d.\n", maxiter - iter);
+	  break;
+	  }*/
+      }
+      copySmallVectorIntoBigVector(betaActive, beta, activeSet, sizeActiveSet);
+      inner_iter_sum += fmin2(maxiter - iter, maxiter);
+    }
+    updateBetaInactiveSet(X, Y, beta, Xactive, betaActive, sizeActiveSet, Xbeta, partialResidual,
+			  inactiveSet, sizeInactiveSet, n, p, lambda, alpha, avgVar);
+    sum = 0.;
+    for (j = sizeInactiveSet; j--; )
+      sum += fabs(beta[inactiveSet[j]]);
+    
+    // Variables may drop out or come in.
+    updateActiveAndInactiveSets(activeSet, &sizeActiveSet, inactiveSet, &sizeInactiveSet, beta, p);
+    
+    if (sum == 0.)
+      break;
   }
   free(Xbeta);
   free(avgVar);
@@ -137,6 +138,9 @@ void minimizeElasticNetSquaredLoss(double *X, double *Y, double *beta, int n, in
   free(betaActive);
   free(activeSet);
   free(inactiveSet);
+  
+  return(inner_iter_sum);
+
 }
 
 void screenVariablesSTRONG(double *X, double *Y, int n, int p,
@@ -202,7 +206,7 @@ void screenVariablesSAFE(double *X, double *Y, int n, int p, double lambda, doub
   free(scores);
 }
 
-void ENLS(double *X, double *Y, double *beta, int *n, int *p, 
+int ENLS(double *X, double *Y, double *beta, int *n, int *p, 
 		 double *lambda, double *alpha, int *maxiter, double *tol) {
   int j;
   double *betaScreened = calloc(*p, sizeof(double));
@@ -210,7 +214,7 @@ void ENLS(double *X, double *Y, double *beta, int *n, int *p,
   double *Xscreened;  
   int sizeKeepSet;
 
-  minimizeElasticNetSquaredLoss(X, Y, beta, *n, *p, *lambda, *alpha, *maxiter, *tol);
+  return(minimizeElasticNetSquaredLoss(X, Y, beta, *n, *p, *lambda, *alpha, *maxiter, *tol));
 
   /*
   // No screening
@@ -245,8 +249,8 @@ void ENLS(double *X, double *Y, double *beta, int *n, int *p,
     for (j = *p; j--; )
       beta[j] = 0.;
   }
-
+  */
   free(betaScreened);
   free(keepSet);
-  */
+
 }

@@ -10,7 +10,7 @@ calculateLambdaMax = function(Y,Z,alpha,w) {
 	K = stepSizeCalculator(w)
 	zeta = beta0 - (1/K)*WZ
 
-	return(max(abs(t(Z) %*%(zeta - mean(zeta))))/(K*nrow(Z)*alpha))
+	return(max(abs(t(Z) %*%(zeta - mean(zeta))))*K/(nrow(Z)*alpha))
 }
 
 calculateLambdaSequence = function(Y,Z,alpha,w,epsilon=0.05,nLambda=50) {
